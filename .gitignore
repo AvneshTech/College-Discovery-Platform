@@ -1,0 +1,16 @@
+node_modules/
+.env
+.env.local
+.DS_Store
+.next/
+out/
+dist/
+build/
+*.log
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+coverage/
+.eslintcache
+prisma/data.db

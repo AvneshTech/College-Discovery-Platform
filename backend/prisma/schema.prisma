@@ -1,0 +1,66 @@
+// This is your Prisma schema file
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int            @id @default(autoincrement())
+  name         String
+  email        String         @unique
+  password     String
+  createdAt    DateTime       @default(now())
+  savedColleges SavedCollege[]
+  discussions  Discussion[]
+  answers      Answer[]
+}
+
+model College {
+  id            Int            @id @default(autoincrement())
+  name          String
+  city          String
+  rating        Float          @default(0)
+  fees          String?
+  courses       String?        // comma-separated e.g. "B.Tech,M.Tech,MBA"
+  overview      String?
+  avgPackage    String?
+  highestPackage String?
+  savedBy       SavedCollege[]
+  createdAt     DateTime       @default(now())
+}
+
+model SavedCollege {
+  id        Int     @id @default(autoincrement())
+  userId    Int
+  collegeId Int
+  user      User    @relation(fields: [userId], references: [id])
+  college   College @relation(fields: [collegeId], references: [id])
+
+  @@unique([userId, collegeId])
+}
+
+model Discussion {
+  id        Int      @id @default(autoincrement())
+  title     String
+  body      String
+  authorId  Int
+  author    User     @relation(fields: [authorId], references: [id])
+  answers   Answer[]
+  createdAt DateTime @default(now())
+}
+
+model Answer {
+  id           Int        @id @default(autoincrement())
+  body         String
+  authorId     Int
+  author       User       @relation(fields: [authorId], references: [id])
+  discussionId Int
+  discussion   Discussion @relation(fields: [discussionId], references: [id])
+  createdAt    DateTime   @default(now())
+}
