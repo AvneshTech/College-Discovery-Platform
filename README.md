@@ -238,4 +238,4 @@ Built with ❤️ using Next.js, Node.js, Prisma, Neon, Render, and Vercel.
 
 ## 📜 License
 
-MIT License
+STUDY PUPOSE
