@@ -83,5 +83,3 @@ npm run dev
 - Add new API integrations in `app/utils/api.ts`
 
 ---
-
-If you want, I can also add a `backend/README.md` describing the server setup and Prisma configuration.
