@@ -1,90 +1,183 @@
-# College Discovery Platform
+# 🎓 College Discovery Platform
 
-A full-stack college discovery web application with:
-- **Frontend** deployed on **Vercel**
-- **Backend** deployed on **Render**
-- **Database** hosted on **Neon PostgreSQL**
+<div align="center">
 
-## Live Deployment
+![Next.js](https://img.shields.io/badge/Next.js-15-black)
+![Node.js](https://img.shields.io/badge/Node.js-Backend-green)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-blue)
+![Render](https://img.shields.io/badge/Backend-Render-46E3B7)
+![Vercel](https://img.shields.io/badge/Frontend-Vercel-black)
 
-- **Frontend:** Vercel
-- **Backend:** Render
-- **Database:** Neon
+**A modern full-stack platform for discovering, comparing, and exploring colleges.**
 
-## Tech Stack
+</div>
 
-- **Frontend:** Next.js, React, TypeScript
-- **Backend:** Node.js, Express
-- **Database:** PostgreSQL on Neon
-- **ORM:** Prisma
-- **Deployment:** Vercel + Render + Neon
+---
 
-## Project Structure
+## 🚀 Live Architecture
 
 ```text
-college-discovery-platform/
-├── backend/
-│   ├── prisma/
-│   ├── src/
-│   ├── package.json
-│   └── .env
+┌─────────────────┐
+│  Frontend       │
+│  Next.js        │
+│  Vercel         │
+└────────┬────────┘
+         │ HTTPS API Calls
+         ▼
+┌─────────────────┐
+│  Backend        │
+│  Node.js        │
+│  Express.js     │
+│  Render         │
+└────────┬────────┘
+         │ Prisma ORM
+         ▼
+┌─────────────────┐
+│  Database       │
+│  PostgreSQL     │
+│  Neon           │
+└─────────────────┘
+```
+
+## ✨ Features
+
+- 🔍 Search and discover colleges
+- 📊 Compare colleges side-by-side
+- 🤖 College prediction module
+- 👤 User Authentication (JWT)
+- 💾 PostgreSQL database integration
+- 📱 Responsive UI
+- ☁️ Production-ready deployment
+
+---
+
+## 🛠 Tech Stack
+
+### Frontend
+- Next.js
+- React
+- TypeScript
+- CSS
+
+### Backend
+- Node.js
+- Express.js
+- Prisma ORM
+- JWT Authentication
+
+### Database
+- PostgreSQL
+- Neon Database
+
+### Deployment
+- Vercel (Frontend)
+- Render (Backend)
+- Neon (Database)
+
+---
+
+## 📂 Project Structure
+
+```bash
+College-Discovery-Platform
+│
 ├── frontend/
 │   ├── app/
 │   ├── components/
+│   ├── services/
 │   ├── utils/
-│   ├── package.json
-│   └── .env.local
+│   └── public/
+│
+├── backend/
+│   ├── prisma/
+│   ├── src/
+│   │   ├── controllers/
+│   │   ├── middleware/
+│   │   ├── routes/
+│   │   └── config/
+│   └── package.json
+│
 └── README.md
 ```
 
-## Environment Variables
+---
 
-### Backend (`backend/.env`)
+## ⚙️ Environment Variables
+
+### Backend
+
 ```env
-DATABASE_URL=postgresql://USERNAME:PASSWORD@HOST/neondb?sslmode=require&channel_binding=require
+DATABASE_URL=postgresql://username:password@host/neondb?sslmode=require
 JWT_SECRET=your_secret_key
 NODE_ENV=production
 ```
 
-### Frontend (`frontend/.env.local` or Vercel Environment Variables)
+### Frontend
+
 ```env
-NEXT_PUBLIC_API_URL=https://your-render-backend.onrender.com
+NEXT_PUBLIC_API_URL=https://your-render-app.onrender.com
 ```
 
-## Deployment Guide
+---
 
-### 1. Deploy Database on Neon
-1. Create a new Neon project.
-2. Copy the PostgreSQL connection string.
-3. Add the connection string to `DATABASE_URL` in the backend environment variables.
-4. Run Prisma to create tables:
-   ```bash
-   npx prisma generate
-   npx prisma db push
-   ```
+## 🚀 Deployment Guide
 
-### 2. Deploy Backend on Render
-1. Push the project to GitHub.
-2. Create a **New Web Service** on Render.
-3. Set:
-   - **Root Directory:** `backend`
-   - **Build Command:** `npm install && npx prisma generate`
-   - **Start Command:** `npm start`
-4. Add environment variables:
-   - `DATABASE_URL`
-   - `JWT_SECRET`
-   - `NODE_ENV=production`
-5. Deploy the service.
+### 1️⃣ Database Deployment (Neon)
 
-### 3. Deploy Frontend on Vercel
-1. Import the repository into Vercel.
-2. Set the frontend environment variable:
-   - `NEXT_PUBLIC_API_URL=https://your-render-backend.onrender.com`
-3. Redeploy the frontend.
+```bash
+Create Project
+↓
+Copy Connection String
+↓
+Add DATABASE_URL
+↓
+npx prisma generate
+↓
+npx prisma db push
+```
 
-## Local Development
+---
+
+### 2️⃣ Backend Deployment (Render)
+
+**Root Directory**
+```text
+backend
+```
+
+**Build Command**
+```bash
+npm install && npx prisma generate
+```
+
+**Start Command**
+```bash
+npm start
+```
+
+**Environment Variables**
+```env
+DATABASE_URL=...
+JWT_SECRET=...
+NODE_ENV=production
+```
+
+---
+
+### 3️⃣ Frontend Deployment (Vercel)
+
+```env
+NEXT_PUBLIC_API_URL=https://your-render-app.onrender.com
+```
+
+Redeploy after adding the variable.
+
+---
+
+## 💻 Local Development
 
 ### Backend
+
 ```bash
 cd backend
 npm install
@@ -93,50 +186,56 @@ npm run dev
 ```
 
 ### Frontend
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-## API Connection Notes
+---
 
-The frontend should call the backend using the base URL from:
+## 📡 API Usage
 
-```ts
-process.env.NEXT_PUBLIC_API_URL
-```
-
-Example:
 ```ts
 fetch(`${API_BASE}/api/login`)
 fetch(`${API_BASE}/api/register`)
-fetch(`${API_BASE}/colleges?page=1`)
+fetch(`${API_BASE}/colleges`)
 ```
 
-## Common Issues
+---
 
-### 404 or HTML response instead of JSON
-This usually means the frontend is calling the Vercel domain instead of the Render backend. Make sure `NEXT_PUBLIC_API_URL` is set correctly.
+## 🔧 Common Issues
 
-### Prisma connection errors
-Check that:
-- `NOw you see all the vercel` is copied correctly from Neon
-- `sslmode=require` is included
-- the backend has been redeployed after updating environment variables
+### 404 Errors
 
-### Empty college list
-This usually means the database has no rows yet. Add seed data or insert records through your app or Prisma.
+Verify:
 
-## Useful Commands
+```env
+NEXT_PUBLIC_API_URL=https://your-render-app.onrender.com
+```
+
+### Prisma Errors
 
 ```bash
 npx prisma generate
 npx prisma db push
-npm install
-npm start
 ```
 
-## License
+### Empty Data
 
-This project is for educational use.
+Insert records into Neon database or seed initial data.
+
+---
+
+## 👨‍💻 Developer
+
+**AvneshTech**
+
+Built with ❤️ using Next.js, Node.js, Prisma, Neon, Render, and Vercel.
+
+---
+
+## 📜 License
+
+MIT License
