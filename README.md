@@ -121,7 +121,7 @@ This usually means the frontend is calling the Vercel domain instead of the Rend
 
 ### Prisma connection errors
 Check that:
-- `postgresql://neondb_owner:npg_aALWQMZfOb13@ep-morning-waterfall-ao09k76t-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require` is copied correctly from Neon
+- `NOw you see all the vercel` is copied correctly from Neon
 - `sslmode=require` is included
 - the backend has been redeployed after updating environment variables
 
