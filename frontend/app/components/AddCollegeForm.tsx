@@ -20,6 +20,8 @@ const FIELD_CONFIG = [
   { name: "courses", label: "Courses (comma-separated)", placeholder: "B.Tech,M.Tech,MBA" },
   { name: "avgPackage", label: "Avg Package", placeholder: "e.g. 18 LPA" },
   { name: "highestPackage", label: "Highest Package", placeholder: "e.g. 2.5 CPA" },
+  { name: "logoUrl", label: "Logo URL (optional)", placeholder: "https://.../logo.png", colSpan: 2 },
+  { name: "bannerUrl", label: "Photo / Banner URL (optional)", placeholder: "https://.../campus.jpg", colSpan: 2 },
 ];
 
 type FormData = Record<string, string>;
@@ -51,6 +53,8 @@ export default function AddCollegeForm({ onAdded }: Props) {
         avgPackage: toNumber(form.avgPackage),
         highestPackage: toNumber(form.highestPackage),
         courses: form.courses ? form.courses.split(",").map((c) => c.trim()).filter(Boolean) : undefined,
+        logoUrl: form.logoUrl?.trim() || undefined,
+        bannerUrl: form.bannerUrl?.trim() || undefined,
         overview: overview || undefined,
       };
       const res = await apiFetch(`/api/colleges`, {

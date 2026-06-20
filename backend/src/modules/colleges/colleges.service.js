@@ -5,6 +5,14 @@ const { ApiError } = require("../../middleware/errorHandler");
 const { recommendColleges } = require("./recommendation.engine");
 const slugify = require("../../utils/slugify");
 
+// Build the human label (e.g. "₹2.2L / yr") from the numeric annual fee, so
+// admins only edit the number and the cards/detail stay in sync automatically.
+function formatFeesDisplay(fees) {
+  if (fees == null) return undefined;
+  if (fees >= 100000) return `₹${(fees / 100000).toFixed(1)}L / yr`;
+  return `₹${Number(fees).toLocaleString("en-IN")} / yr`;
+}
+
 const collegesService = {
   async list(filters) {
     const { page, limit, search, city, minRating, maxFees, branch, sortBy } = filters;
@@ -38,12 +46,15 @@ const collegesService = {
 
   async create(data, adminId) {
     const slug = await slugify.unique(data.name, (s) => prisma.college.findUnique({ where: { slug: s } }));
-    return collegesRepository.create({ ...data, slug, createdById: adminId });
+    const feesDisplay = data.fees != null ? formatFeesDisplay(data.fees) : undefined;
+    return collegesRepository.create({ ...data, slug, feesDisplay, createdById: adminId });
   },
 
   async update(id, data) {
     await this.getById(id); // 404 if missing
-    return collegesRepository.update(id, data);
+    const patch = { ...data };
+    if (data.fees != null) patch.feesDisplay = formatFeesDisplay(data.fees);
+    return collegesRepository.update(id, patch);
   },
 
   async remove(id) {

@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Navbar from "../../components/Navbar";
 import { API_BASE } from "../../utils/api";
-import { authHeaders, isLoggedIn } from "../../utils/auth";
+import { apiFetch } from "../../lib/apiClient";
+import { useAuth } from "../../lib/AuthProvider";
 
 type Answer = {
   id: number;
@@ -25,6 +26,7 @@ type Discussion = {
 export default function DiscussionDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useAuth();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const [discussion, setDiscussion] = useState<Discussion | null>(null);
@@ -46,15 +48,14 @@ export default function DiscussionDetailPage() {
   useEffect(() => { if (id) fetchDiscussion(); }, [id]);
 
   const handleAnswer = async () => {
-    if (!isLoggedIn()) { router.push("/login"); return; }
+    if (!user) { router.push("/login"); return; }
     if (!answerBody.trim()) { setError("Answer cannot be empty"); return; }
 
     setError("");
     setSubmitting(true);
     try {
-      const res = await fetch(`${API_BASE}/api/discussions/${id}/answers`, {
+      const res = await apiFetch(`/api/discussions/${id}/answers`, {
         method: "POST",
-        headers: authHeaders(),
         body: JSON.stringify({ body: answerBody }),
       });
       const data = await res.json();
@@ -136,16 +137,16 @@ export default function DiscussionDetailPage() {
         <div className="bg-white rounded-2xl shadow p-6">
           <h3 className="text-lg font-bold text-slate-900 mb-4">Your Answer</h3>
           <textarea
-            placeholder={isLoggedIn() ? "Write your answer here..." : "Login to answer..."}
+            placeholder={user ? "Write your answer here..." : "Login to answer..."}
             value={answerBody}
             onChange={(e) => setAnswerBody(e.target.value)}
             rows={4}
-            disabled={!isLoggedIn()}
+            disabled={!user}
             className="w-full p-3 border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:bg-gray-50"
           />
           {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
           <div className="mt-3">
-            {isLoggedIn() ? (
+            {user ? (
               <button
                 onClick={handleAnswer}
                 disabled={submitting}

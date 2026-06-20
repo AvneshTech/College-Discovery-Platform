@@ -8,10 +8,13 @@ import AddCollegeForm from "./components/AddCollegeForm";
 import { PageSkeleton } from "./components/Skeleton";
 import { API_BASE } from "./utils/api";
 import { apiFetch } from "./lib/apiClient";
+import { collegeLogo, collegeBanner } from "./utils/collegeImages";
 import { useAuth } from "./lib/AuthProvider";
 
 type College = {
   id: number;
+  slug?: string | null;
+  website?: string | null;
   name: string;
   city: string;
   state?: string | null;
@@ -298,10 +301,10 @@ export default function Home() {
                 state={college.state}
                 rating={college.rating}
                 reviewCount={college.reviewCount}
-                logoUrl={college.logoUrl}
-                bannerUrl={college.bannerUrl}
                 nirfRank={college.nirfRank}
                 naacGrade={college.naacGrade}
+                logoUrl={collegeLogo(college)}
+                bannerUrl={collegeBanner(college)}
                 feesDisplay={college.feesDisplay}
                 avgPackage={college.avgPackage}
                 highestPackage={college.highestPackage}

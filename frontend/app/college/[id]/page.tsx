@@ -5,7 +5,39 @@ import { useParams, useRouter } from "next/navigation";
 import Navbar from "../../components/Navbar";
 import { API_BASE } from "../../utils/api";
 import { apiFetch } from "../../lib/apiClient";
+import { collegeLogo, collegeBanner } from "../../utils/collegeImages";
 import { isLoggedIn } from "../../utils/auth";
+import { useAuth } from "../../lib/AuthProvider";
+import EditCollegeForm from "../../components/EditCollegeForm";
+
+// Guaranteed-available generic campus photo, used if both the real bannerUrl
+// and the derived placeholder fail to load.
+const FALLBACK_BANNER =
+  "https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=1600&q=70";
+
+// Shared inline styles for the hero (inline => always applied, no Tailwind dep).
+const badgePill: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 4,
+  borderRadius: 9999,
+  background: "rgba(0,0,0,0.32)",
+  backdropFilter: "blur(4px)",
+  padding: "4px 12px",
+  fontWeight: 600,
+};
+
+const heroBtn: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  borderRadius: 9999,
+  padding: "12px 24px",
+  fontWeight: 600,
+  boxShadow: "0 8px 20px rgba(0,0,0,0.25)",
+  border: "none",
+  cursor: "pointer",
+};
 
 type Review = {
   id: number;
@@ -27,10 +59,13 @@ type Deadline = {
 // (collegesRepository.findById) and the Prisma College model.
 type College = {
   id: number;
+  slug?: string | null;
   name: string;
   city: string;
   state?: string | null;
   type?: string | null;
+  logoUrl?: string | null;
+  bannerUrl?: string | null;
   rating: number;
   reviewCount?: number;
   nirfRank?: number | null;
@@ -61,12 +96,23 @@ function formatINR(amount?: number | null): string {
 export default function CollegeDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useAuth();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const [college, setCollege] = useState<College | null>(null);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const isAdmin = user?.role === "ADMIN";
+
+  const handleDelete = async () => {
+    if (!window.confirm("Delete this college permanently? This cannot be undone.")) return;
+    try {
+      const res = await apiFetch(`/api/colleges/${id}`, { method: "DELETE" });
+      if (res.ok) router.push("/");
+    } catch { /* ignore */ }
+  };
   const [activeTab, setActiveTab] = useState<"overview" | "courses" | "placements" | "reviews">(
     "overview"
   );
@@ -177,45 +223,205 @@ export default function CollegeDetailPage() {
   const reviews = college.reviews ?? [];
   const deadlines = college.deadlines ?? [];
   const tabs = ["overview", "courses", "placements", "reviews"] as const;
+  const bannerUrl = collegeBanner(college);
+  const logoUrl = collegeLogo(college);
 
   return (
     <main className="min-h-screen bg-gray-100">
       <Navbar />
 
-      {/* Header Banner */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white py-12 px-6">
-        <div className="max-w-5xl mx-auto">
+      {/*
+        HERO — info overlaid directly ON the campus banner (no white card)
+        --------------------------------------------------------------------
+        BULLETPROOF VERSION: all layout-critical rules use INLINE STYLES so it
+        renders correctly even if Tailwind isn't scanning this file or the
+        SmartImage component is out of date. Uses a plain <img> (no SmartImage
+        dependency) with a built-in onError fallback.
+
+          ┌──────────────────────────────────────────────┐
+          │  ← Back to colleges                           │
+          │                                               │
+          │  [Logo]  IIT Madras                           │
+          │          📍 Chennai, Tamil Nadu               │
+          │          ⭐ 4.8 · 🏅 NIRF #1 · 🎖 NAAC · 💰   │  [Save][Edit][Delete]
+          └──────────────────────────────────────────────┘
+      */}
+      <section
+        className="relative w-full overflow-hidden text-white"
+        // height: 380px (mobile) → up to 560px (desktop) via clamp — inline so
+        // it ALWAYS applies regardless of Tailwind config.
+        style={{ height: "clamp(380px, 46vw, 560px)" }}
+      >
+        {/* Full-width campus image (plain <img>, inline-positioned) */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={bannerUrl}
+          alt={`${college.name} campus`}
+          loading="eager"
+          onError={(e) => {
+            // Fall back to a guaranteed campus photo if the real one fails.
+            const img = e.currentTarget;
+            if (img.src !== FALLBACK_BANNER) img.src = FALLBACK_BANNER;
+          }}
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+          }}
+        />
+
+        {/* Dark gradient overlay for text readability */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "linear-gradient(to top, rgba(0,0,0,0.78), rgba(0,0,0,0.25))",
+            pointerEvents: "none",
+          }}
+        />
+
+        {/* Content overlaid on the banner — flex column, content pinned bottom */}
+        <div
+          className="mx-auto max-w-6xl"
+          style={{
+            position: "relative",
+            zIndex: 10,
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+            padding: "24px 20px",
+          }}
+        >
+          {/* Back link — top */}
           <button
             onClick={() => router.back()}
-            className="text-blue-200 hover:text-white text-sm mb-4 block"
+            style={{ width: "fit-content", fontSize: 14, color: "rgba(255,255,255,0.85)" }}
           >
             ← Back to colleges
           </button>
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-            <div>
-              <h1 className="text-4xl font-bold mb-2">{college.name}</h1>
-              <div className="flex flex-wrap gap-4 text-blue-100 mt-2">
-                <span>📍 {college.city}{college.state ? `, ${college.state}` : ""}</span>
-                <span>⭐ {college.rating} / 5.0</span>
-                {college.feesDisplay && <span>💰 {college.feesDisplay}</span>}
-                {college.nirfRank && <span>🏅 NIRF #{college.nirfRank}</span>}
-                {college.naacGrade && <span>🎖 NAAC {college.naacGrade}</span>}
+
+          {/* Bottom row: [logo + info] left, [buttons] right */}
+          <div
+            style={{ marginTop: "auto" }}
+            className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between"
+          >
+            {/* LEFT: logo to the LEFT of the name */}
+            <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+              {/* Logo: 80–120px, white bg, rounded, shadow, object-contain (inline) */}
+              <div
+                style={{
+                  width: "clamp(80px, 11vw, 120px)",
+                  height: "clamp(80px, 11vw, 120px)",
+                  flexShrink: 0,
+                  background: "#fff",
+                  borderRadius: 14,
+                  padding: 10,
+                  boxShadow: "0 10px 25px rgba(0,0,0,0.35)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  overflow: "hidden",
+                }}
+              >
+                {logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={logoUrl}
+                    alt={`${college.name} logo`}
+                    onError={(e) => (e.currentTarget.style.display = "none")}
+                    style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                  />
+                ) : (
+                  <span style={{ fontSize: 36, fontWeight: 700, color: "#334155" }}>
+                    {(college.name?.charAt(0) || college.city?.charAt(0) || "?").toUpperCase()}
+                  </span>
+                )}
+              </div>
+
+              {/* Name + location + badges */}
+              <div style={{ minWidth: 0 }}>
+                <h1
+                  className="font-extrabold"
+                  style={{
+                    fontSize: "clamp(28px, 5vw, 52px)",
+                    lineHeight: 1.1,
+                    textShadow: "0 2px 8px rgba(0,0,0,0.5)",
+                    margin: 0,
+                  }}
+                >
+                  {college.name}
+                </h1>
+                <p
+                  style={{
+                    marginTop: 8,
+                    fontSize: 16,
+                    color: "rgba(255,255,255,0.92)",
+                    textShadow: "0 1px 4px rgba(0,0,0,0.5)",
+                  }}
+                >
+                  📍 {college.city}
+                  {college.state ? `, ${college.state}` : ""}
+                </p>
+                <div
+                  style={{
+                    marginTop: 12,
+                    display: "flex",
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                    gap: 8,
+                    fontSize: 14,
+                  }}
+                >
+                  {/* Badge pill style shared via a small inline object */}
+                  <span style={{ ...badgePill, color: "#fcd34d" }}>⭐ {college.rating} / 5.0</span>
+                  {college.nirfRank && (
+                    <span style={{ ...badgePill, color: "#fde68a" }}>🏅 NIRF #{college.nirfRank}</span>
+                  )}
+                  {college.naacGrade && (
+                    <span style={{ ...badgePill, color: "#a7f3d0" }}>🎖 NAAC {college.naacGrade}</span>
+                  )}
+                  {college.feesDisplay && (
+                    <span style={{ ...badgePill, color: "rgba(255,255,255,0.92)" }}>💰 {college.feesDisplay}</span>
+                  )}
+                </div>
               </div>
             </div>
-            <button
-              onClick={handleSave}
-              disabled={saveLoading}
-              className={`px-6 py-3 rounded-xl font-semibold transition ${
-                saved
-                  ? "bg-white text-blue-600 hover:bg-blue-50"
-                  : "bg-blue-500 text-white hover:bg-blue-400 border border-blue-300"
-              }`}
-            >
-              {saveLoading ? "..." : saved ? "✓ Saved" : "🔖 Save College"}
-            </button>
+
+            {/* RIGHT: action buttons */}
+            <div className="flex flex-wrap items-center gap-3 md:shrink-0">
+              <button
+                onClick={handleSave}
+                disabled={saveLoading}
+                style={{
+                  ...heroBtn,
+                  background: saved ? "#2563eb" : "#fff",
+                  color: saved ? "#fff" : "#0f172a",
+                }}
+              >
+                {saveLoading ? "..." : saved ? "✓ Saved" : "🔖 Save"}
+              </button>
+              {isAdmin && (
+                <>
+                  <button
+                    onClick={() => setShowEdit(true)}
+                    style={{ ...heroBtn, background: "#fbbf24", color: "#0f172a" }}
+                  >
+                    ✏️ Edit
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    style={{ ...heroBtn, background: "#ef4444", color: "#fff" }}
+                  >
+                    🗑 Delete
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Tabs */}
       <div className="bg-white shadow-sm sticky top-0 z-10">
@@ -441,6 +647,14 @@ export default function CollegeDetailPage() {
           </div>
         )}
       </section>
+
+      {showEdit && (
+        <EditCollegeForm
+          college={college}
+          onClose={() => setShowEdit(false)}
+          onSaved={async () => { setShowEdit(false); await loadCollege(); }}
+        />
+      )}
     </main>
   );
 }

@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "../components/Navbar";
 import { API_BASE } from "../utils/api";
-import { authHeaders, isLoggedIn } from "../utils/auth";
+import { apiFetch } from "../lib/apiClient";
+import { useAuth } from "../lib/AuthProvider";
 
 type Discussion = {
   id: number;
@@ -17,6 +18,7 @@ type Discussion = {
 
 export default function DiscussionsPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [discussions, setDiscussions] = useState<Discussion[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -37,15 +39,14 @@ export default function DiscussionsPage() {
   useEffect(() => { fetchDiscussions(); }, []);
 
   const handleSubmit = async () => {
-    if (!isLoggedIn()) { router.push("/login"); return; }
+    if (!user) { router.push("/login"); return; }
     if (!title.trim() || !body.trim()) { setError("Both fields are required"); return; }
 
     setError("");
     setSubmitting(true);
     try {
-      const res = await fetch(`${API_BASE}/api/discussions`, {
+      const res = await apiFetch(`/api/discussions`, {
         method: "POST",
-        headers: authHeaders(),
         body: JSON.stringify({ title, body }),
       });
       const data = await res.json();
@@ -70,7 +71,7 @@ export default function DiscussionsPage() {
           </div>
           <button
             onClick={() => {
-              if (!isLoggedIn()) { router.push("/login"); return; }
+              if (!user) { router.push("/login"); return; }
               setShowForm(!showForm);
             }}
             className="bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700 font-semibold"

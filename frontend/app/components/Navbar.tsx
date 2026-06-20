@@ -4,6 +4,33 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "../lib/AuthProvider";
+import { useTheme } from "../lib/ThemeProvider";
+
+function ThemeToggle({ className = "" }: { className?: string }) {
+  const { theme, toggleTheme } = useTheme();
+  const isDark = theme === "dark";
+  return (
+    <button
+      onClick={toggleTheme}
+      className={`theme-toggle ${className}`}
+      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      title={isDark ? "Light mode" : "Dark mode"}
+    >
+      {isDark ? (
+        // Sun
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="4" strokeWidth={2} />
+          <path strokeLinecap="round" strokeWidth={2} d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+        </svg>
+      ) : (
+        // Moon
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+        </svg>
+      )}
+    </button>
+  );
+}
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
@@ -72,6 +99,7 @@ export default function Navbar() {
           </nav>
 
           <div className="hidden md:flex items-center gap-2">
+            <ThemeToggle />
             {user ? (
               <>
                 <Link href="/saved" className="px-3 py-2 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/8 transition-all">
@@ -101,15 +129,18 @@ export default function Navbar() {
             )}
           </div>
 
+          <div className="md:hidden flex items-center gap-1">
+          <ThemeToggle />
           <button
             onClick={() => setMobileOpen((v) => !v)}
-            className="md:hidden w-9 h-9 flex flex-col items-center justify-center gap-1.5 rounded-lg hover:bg-white/10 transition"
+            className="w-9 h-9 flex flex-col items-center justify-center gap-1.5 rounded-lg hover:bg-white/10 transition"
             aria-label="Toggle menu"
           >
             <span className={`block w-5 h-0.5 bg-white transition-all ${mobileOpen ? "rotate-45 translate-y-2" : ""}`} />
             <span className={`block w-5 h-0.5 bg-white transition-all ${mobileOpen ? "opacity-0" : ""}`} />
             <span className={`block w-5 h-0.5 bg-white transition-all ${mobileOpen ? "-rotate-45 -translate-y-2" : ""}`} />
           </button>
+          </div>
         </div>
       </div>
 

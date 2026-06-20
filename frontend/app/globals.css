@@ -1,6 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Lora:wght@600;700&display=swap');
 @import "tailwindcss";
 
+/* Make Tailwind's `dark:` variant respond to a `.dark` class on <html>
+   (toggled by ThemeProvider) instead of the OS preference only. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ─── Design Tokens ─────────────────────────────────────────────────────── */
 :root {
   --navy-950: #0a0f1e;
@@ -338,3 +342,115 @@ select.input { cursor: pointer; }
   .tab-bar { overflow-x: auto; }
   .tab-item { flex: none; padding: 8px 12px; }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   DARK MODE
+   ---------------------------------------------------------------------------
+   Two layers of coverage:
+   1. Re-map the design tokens so every token-based component (.card, .input,
+      .btn, .stat-card, .compare-table, .tab-bar, badges, body, etc.) flips
+      automatically.
+   2. Re-map the handful of hardcoded Tailwind neutral utilities that older
+      pages use directly (bg-white, bg-gray-*, text-slate-*, border-slate-*).
+      `.dark .x` has higher specificity than the plain `.x` utility, so these
+      win; components that already ship their own `dark:` variants still work
+      via the @custom-variant above.
+   ───────────────────────────────────────────────────────────────────────── */
+html.dark {
+  --navy-950: #060912;
+  --navy-900: #0b1120;
+  --navy-800: #111d3a;
+  --navy-700: #1e3060;
+  --navy-600: #2a4378;
+
+  --surface-0: #0f172a; /* card / panel background */
+  --surface-1: #0b1120; /* page background        */
+  --surface-2: #1e293b;
+  --surface-3: #334155;
+
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+
+  --border: #1e293b;
+  --border-focus: #3b82f6;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.4);
+  --shadow-lg: 0 12px 32px rgba(0,0,0,0.6), 0 4px 12px rgba(0,0,0,0.45);
+  --shadow-card-hover: 0 20px 40px rgba(0,0,0,0.6), 0 6px 16px rgba(0,0,0,0.5);
+
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: var(--surface-1);
+  color: var(--text-primary);
+}
+
+/* Scrollbar */
+html.dark ::-webkit-scrollbar-track { background: var(--surface-1); }
+html.dark ::-webkit-scrollbar-thumb { background: #334155; }
+html.dark ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+/* Card hover border in dark */
+html.dark .card:hover { border-color: #334155; }
+
+/* Compare table zebra/hover in dark */
+html.dark .compare-table tbody tr:nth-child(even) { background: var(--surface-2); }
+html.dark .compare-table tbody tr:hover { background: #1e3a5f; }
+html.dark .compare-best { background: rgba(34,197,94,0.12) !important; color: #4ade80; }
+
+/* Tab bar active pill in dark */
+html.dark .tab-item.active { background: var(--surface-2); color: #e2e8f0; }
+html.dark .tab-item:hover { background: rgba(255,255,255,0.04); }
+
+/* Hero light background variant in dark */
+html.dark .hero-bg {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(59,130,246,0.10) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 40% at 90% 50%, rgba(245,158,11,0.06) 0%, transparent 60%),
+    var(--surface-1);
+}
+
+/* ─── Hardcoded neutral utility remaps (only inside .dark) ─────────────── */
+.dark .bg-white { background-color: var(--surface-0); }
+.dark .bg-gray-100 { background-color: var(--surface-1); }
+.dark .bg-gray-50 { background-color: var(--surface-2); }
+.dark .bg-slate-50 { background-color: var(--surface-2); }
+.dark .bg-slate-100 { background-color: var(--surface-2); }
+
+.dark .text-slate-900 { color: #f1f5f9; }
+.dark .text-slate-800 { color: #e2e8f0; }
+.dark .text-slate-700 { color: #cbd5e1; }
+.dark .text-slate-600 { color: #94a3b8; }
+.dark .text-slate-500 { color: #94a3b8; }
+
+.dark .border-slate-300 { border-color: #334155; }
+.dark .border-slate-200 { border-color: #1e293b; }
+.dark .border-slate-100 { border-color: #1e293b; }
+
+/* Soft tinted chips used on profile / cards */
+.dark .bg-blue-50 { background-color: rgba(59,130,246,0.14); }
+.dark .bg-blue-100 { background-color: rgba(59,130,246,0.20); }
+.dark .bg-green-50 { background-color: rgba(34,197,94,0.14); }
+.dark .bg-red-50 { background-color: rgba(239,68,68,0.14); }
+.dark .hover\:bg-blue-100:hover { background-color: rgba(59,130,246,0.24); }
+.dark .hover\:bg-green-100:hover { background-color: rgba(34,197,94,0.24); }
+.dark .hover\:bg-red-100:hover { background-color: rgba(239,68,68,0.24); }
+.dark .hover\:bg-gray-50:hover { background-color: var(--surface-2); }
+.dark .hover\:bg-slate-50:hover { background-color: var(--surface-2); }
+
+/* Theme toggle button */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  color: rgba(255,255,255,0.7);
+  transition: background 0.18s ease, color 0.18s ease;
+  flex-shrink: 0;
+}
+.theme-toggle:hover { background: rgba(255,255,255,0.1); color: #fff; }
