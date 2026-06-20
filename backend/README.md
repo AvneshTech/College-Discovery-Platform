@@ -1,129 +1,60 @@
-# College Discovery Platform — Backend
+# CollegeEdge API v2 — Architecture
 
-This repository contains the Express backend for the College Discovery Platform.
+This replaces the original single-file `index.js` with a layered, modular
+backend. Drop this folder in place of your old `backend/`, copy `prisma/schema.prisma`
+over your old one, run migrations, and you have a working RBAC + secure API
+that your existing frontend can be migrated to incrementally (see the main
+audit doc for the migration order).
 
-## Overview
+## Folder structure
 
-The backend provides:
+```
+src/
+  config/        env loading + validation, Prisma singleton
+  middleware/    security (helmet/cors/rate-limit), auth/RBAC, validation, sanitize, errors
+  modules/
+    auth/        register, login, refresh-token rotation, logout
+    colleges/    CRUD, search/filter/pagination, comparison, recommendation engine
+    users/       profile, saved colleges, admin user management
+    discussions/ forum + real-time replies + moderation
+  realtime/      Socket.io handlers (notifications, live discussion rooms)
+  utils/         token signing, slugify
+  app.js         Express app (middleware + route wiring) — no listen() here
+  server.js      HTTP server + Socket.io + listen()
+prisma/
+  schema.prisma  upgraded schema (RBAC, reviews, deadlines, scholarships, cutoffs)
+```
 
-- user registration and login with JWT authentication
-- college listing with filters, pagination, and search
-- college creation for admin-style additions
-- college comparison support
-- saved college management per user
-- predictor endpoint for college recommendations by exam rank
-- discussion threads with answers
-- profile lookup
+Each module follows **Controller → Service → Repository**:
+- **Repository**: the only layer that imports Prisma. Pure data access.
+- **Service**: business logic, orchestration, throws `ApiError` for known failures.
+- **Controller**: thin HTTP layer — parses `req`, calls service, shapes `res`.
+- **Routes**: wires `validate(schema)` + `authMiddleware` + `requireRole()` + controller.
 
-## Tech stack
+This is what "Clean Architecture" / "Repository Pattern" means in practice —
+when an interviewer asks "how is your backend structured," you point at this.
 
-- Node.js + Express
-- Prisma ORM
-- PostgreSQL
-- bcryptjs for password hashing
-- jsonwebtoken for JWT auth
-- cors for cross-origin requests
-- dotenv for environment variables
+## Why refresh tokens are cookies, not localStorage
+
+Access tokens (15 min) are returned in the JSON body and kept in memory/React
+state on the frontend — never localStorage, so they can't be stolen via XSS.
+Refresh tokens (30 days) are set as an `httpOnly`, `secure`, `sameSite=lax`
+cookie scoped to `/api/auth` — JavaScript can never read it. On 401 with
+`code: "TOKEN_EXPIRED"`, the frontend calls `/api/auth/refresh` (cookie sent
+automatically) to get a new access token silently.
 
 ## Setup
 
-### 1. Install dependencies
-
 ```bash
-cd backend
 npm install
-```
-
-### 2. Configure environment
-
-Create a `.env` file in `backend/` with the following values:
-
-```env
-DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE"
-JWT_SECRET=your_jwt_secret
-PORT=5000
-```
-
-- `DATABASE_URL` must point to your PostgreSQL database
-- `JWT_SECRET` is used to sign and verify auth tokens
-- `PORT` defaults to `5000` if not provided
-
-### 3. Initialize Prisma
-
-```bash
-npm run db:generate
-npm run db:studio
-```
-
-To push the Prisma schema to the database:
-
-```bash
-npm run db:push
-```
-
-## Database schema
-
-The Prisma schema is defined in `prisma/schema.prisma` and includes:
-
-- `User` — registered users with saved colleges, discussions, and answers
-- `College` — college metadata, including rating, fees, courses, and packages
-- `SavedCollege` — junction table linking users with saved colleges
-- `Discussion` — discussion threads authored by users
-- `Answer` — answers to discussions authored by users
-
-## API routes
-
-### Auth
-
-- `POST /api/register` — register a new user
-- `POST /api/login` — user login and JWT token issuance
-
-### Colleges
-
-- `GET /api/colleges` — list colleges with optional filters:
-  - `page`, `limit`, `search`, `city`, `minRating`, `courseType`
-- `POST /api/colleges` — add a new college
-- `POST /api/colleges/compare` — compare 2–3 colleges by ids
-- `GET /api/colleges/:id` — fetch details for a single college
-
-### Saved colleges
-
-- `GET /api/saved` — fetch saved colleges for the authenticated user
-- `POST /api/saved/:collegeId` — save a college for the authenticated user
-- `DELETE /api/saved/:collegeId` — remove a saved college
-
-### Predictor
-
-- `POST /api/predictor` — returns recommended colleges based on exam and rank
-
-### Discussions
-
-- `GET /api/discussions` — list all discussions
-- `GET /api/discussions/:id` — get a discussion with answers
-- `POST /api/discussions` — create a discussion (authenticated)
-- `POST /api/discussions/:id/answers` — post an answer to a discussion (authenticated)
-
-### Profile
-
-- `GET /api/profile` — get the current authenticated user profile
-
-## Running the server
-
-```bash
+cp .env.example .env   # fill in DATABASE_URL + two JWT secrets
+npx prisma migrate dev --name init
 npm run dev
 ```
 
-The server listens on `http://localhost:5000` by default.
+## What's intentionally left for you to extend
 
-## Frontend integration
-
-This backend is intended to work with the frontend in `../frontned`.
-
-The frontend expects the API base URL to be available via `NEXT_PUBLIC_API_URL`.
-
-## Notes
-
-- JWT authentication is enforced via `Authorization: Bearer <token>` headers for protected routes.
-- Passwords are hashed with bcrypt before storage.
-- The `authMiddleware` verifies tokens and attaches `req.user`.
-- The default root route `GET /` returns a simple health check.
+- `modules/users/users.routes.js` — admin "Manage Users" list is there; wire it to an admin dashboard table in the frontend.
+- `prisma/seed.js` — not included; seed colleges + a CutoffRecord per (college, exam, branch, category, year) so the predictor has data to score against.
+- Image upload (Cloudinary/S3) for `logoUrl`/`bannerUrl`/`gallery` — add a `modules/uploads` module with `multer` + your storage provider's SDK.
+- Email notifications — add a `modules/notifications/email.service.js` using Resend/Nodemailer, call it from the deadline-reminder cron and from `discussions.routes.js` on new replies.
