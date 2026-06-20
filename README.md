@@ -276,8 +276,6 @@ Released under the **MIT License** — see [`LICENSE`](LICENSE).
 
 <div align="center">
 
-**Built with ❤️ for students choosing their future.**
-
-<sub>If this project helped you, consider giving it a ⭐ on GitHub.</sub>
+**Built with ❤️**
 
 </div>
