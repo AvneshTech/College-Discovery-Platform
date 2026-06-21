@@ -10,8 +10,23 @@ const collegesController = {
   }),
 
   getById: asyncHandler(async (req, res) => {
-    const college = await collegesService.getById(Number(req.params.id));
+    const college = await collegesService.getById(Number(req.params.id), req.user?.id);
     res.json(college);
+  }),
+
+  featured: asyncHandler(async (req, res) => {
+    const colleges = await collegesService.featured(req.query.limit);
+    res.json(colleges);
+  }),
+
+  trending: asyncHandler(async (req, res) => {
+    const colleges = await collegesService.trending(req.query.limit);
+    res.json(colleges);
+  }),
+
+  mostViewed: asyncHandler(async (req, res) => {
+    const colleges = await collegesService.mostViewed(req.query.limit);
+    res.json(colleges);
   }),
 
   create: asyncHandler(async (req, res) => {

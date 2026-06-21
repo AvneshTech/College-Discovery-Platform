@@ -45,6 +45,76 @@ const collegesRepository = {
 
   delete: (id) => prisma.college.delete({ where: { id } }),
 
+  // Analytics: record a CollegeView row (for time-series "trending" queries)
+  // and bump the denormalized College.viewsCount in a single transaction so
+  // the two never drift apart.
+  recordView: (collegeId, userId) =>
+    prisma.$transaction([
+      prisma.collegeView.create({ data: { collegeId, userId: userId ?? null } }),
+      prisma.college.update({ where: { id: collegeId }, data: { viewsCount: { increment: 1 } } }),
+    ]),
+
+  incrementCompareCount: (ids) =>
+    prisma.college.updateMany({ where: { id: { in: ids } }, data: { compareCount: { increment: 1 } } }),
+
+  incrementSaveCount: (collegeId) =>
+    prisma.college.update({ where: { id: collegeId }, data: { saveCount: { increment: 1 } } }),
+
+  decrementSaveCount: (collegeId) =>
+    // Guard against going negative if counts ever drift (e.g. manual DB edits).
+    prisma.college.updateMany({
+      where: { id: collegeId, saveCount: { gt: 0 } },
+      data: { saveCount: { decrement: 1 } },
+    }),
+
+  findFeatured: (limit) =>
+    prisma.college.findMany({
+      where: { isPublished: true, isFeatured: true },
+      orderBy: { rating: "desc" },
+      take: limit,
+    }),
+
+  // "Trending" = most viewed in the last 7 days (CollegeView time-series),
+  // not just lifetime viewsCount — surfaces colleges currently getting
+  // attention rather than ones that were popular a year ago.
+  async findTrending(limit) {
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const grouped = await prisma.collegeView.groupBy({
+      by: ["collegeId"],
+      where: { viewedAt: { gte: since } },
+      _count: { _all: true },
+      orderBy: { _count: { collegeId: "desc" } },
+      take: limit,
+    });
+    if (grouped.length === 0) return [];
+    const colleges = await prisma.college.findMany({
+      where: { id: { in: grouped.map((g) => g.collegeId) }, isPublished: true },
+    });
+    const order = new Map(grouped.map((g, i) => [g.collegeId, i]));
+    return colleges.sort((a, b) => order.get(a.id) - order.get(b.id));
+  },
+
+  findMostViewed: (limit) =>
+    prisma.college.findMany({
+      where: { isPublished: true },
+      orderBy: { viewsCount: "desc" },
+      take: limit,
+    }),
+
+  findMostSaved: (limit) =>
+    prisma.college.findMany({
+      where: { isPublished: true },
+      orderBy: { saveCount: "desc" },
+      take: limit,
+    }),
+
+  findMostCompared: (limit) =>
+    prisma.college.findMany({
+      where: { isPublished: true },
+      orderBy: { compareCount: "desc" },
+      take: limit,
+    }),
+
   // Used by the recommendation engine: pull a candidate pool of colleges
   // that have cutoff data for the given exam/category near the user's rank.
   findCandidatesForPredictor: ({ exam, category }) =>

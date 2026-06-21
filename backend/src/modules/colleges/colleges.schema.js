@@ -7,10 +7,16 @@ const listQuerySchema = z.object({
     limit: z.coerce.number().int().min(1).max(50).default(9),
     search: z.string().trim().max(100).optional(),
     city: z.string().trim().max(100).optional(),
+    state: z.string().trim().max(100).optional(),
     minRating: z.coerce.number().min(0).max(5).optional(),
     maxFees: z.coerce.number().int().positive().optional(),
     branch: z.string().trim().max(50).optional(),
-    sortBy: z.enum(["rating", "fees", "nirfRank", "avgPackage"]).default("rating"),
+    course: z.string().trim().max(50).optional(),
+    featured: z.coerce.boolean().optional(),
+    verified: z.coerce.boolean().optional(),
+    sortBy: z
+      .enum(["rating", "fees", "nirfRank", "avgPackage", "viewsCount", "saveCount", "createdAt"])
+      .default("rating"),
   }),
 });
 
@@ -67,6 +73,12 @@ const predictorSchema = z.object({
   }),
 });
 
+const topListQuerySchema = z.object({
+  query: z.object({
+    limit: z.coerce.number().int().min(1).max(50).default(10),
+  }),
+});
+
 module.exports = {
   listQuerySchema,
   createCollegeSchema,
@@ -74,4 +86,5 @@ module.exports = {
   compareSchema,
   predictorSchema,
   createReviewSchema,
+  topListQuerySchema,
 };

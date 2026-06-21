@@ -8,30 +8,132 @@ datasource db {
 }
 
 model User {
-  id                Int            @id @default(autoincrement())
+  id                Int       @id @default(autoincrement())
   name              String
-  email             String         @unique
+  email             String    @unique
   password          String
-  role              Role           @default(STUDENT)
+  role              Role      @default(STUDENT)
   avatarUrl         String?
-  isActive          Boolean        @default(true)
-  emailVerified     Boolean        @default(false)
-  preferredBranches String[]       @default([])
-  preferredCities   String[]       @default([])
+  avatarPublicId    String?
+  bio               String?
+  isActive          Boolean   @default(true)
+  emailVerified     Boolean   @default(false)
+  preferredBranches String[]  @default([])
+  preferredCities   String[]  @default([])
   budgetMaxFees     Int?
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  answers           Answer[]
-  collegesCreated   College[]      @relation("CollegeCreatedBy")
-  discussions       Discussion[]
-  notifications     Notification[]
-  predictorRuns     PredictorRun[]
-  refreshTokens     RefreshToken[]
-  reviews           Review[]
-  savedColleges     SavedCollege[]
+  lastLoginAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  answers          Answer[]
+  collegesCreated  College[]        @relation("CollegeCreatedBy")
+  collegeViews     CollegeView[]
+  contactInquiries ContactInquiry[]
+  discussions      Discussion[]
+  notifications    Notification[]
+  predictorRuns    PredictorRun[]
+  refreshTokens    RefreshToken[]
+  reviews          Review[]
+  savedColleges    SavedCollege[]
+  uploads          Upload[]
 
   @@index([role])
   @@index([email])
+}
+
+model College {
+  id Int @id @default(autoincrement())
+
+  // Basic Info
+  name    String
+  slug    String  @unique
+  city    String
+  state   String?
+  country String? @default("India")
+  type    String?
+
+  // Contact
+  email String?
+  phone String?
+
+  // Branding & Media
+  logoUrl      String?
+  logoPublicId String?
+
+  bannerUrl      String?
+  bannerPublicId String?
+
+  // Gallery (unified — array of { url, publicId, caption })
+  gallery Json?
+
+  // Ratings
+  rating      Float @default(0)
+  reviewCount Int   @default(0)
+
+  // Rankings
+  nirfRank  Int?
+  naacGrade String?
+
+  // Placements
+  avgPackage     Int?
+  highestPackage Int?
+  placementRate  Float?
+
+  // Fees
+  fees        Int?
+  feesDisplay String?
+
+  // Academic
+  courses  String[] @default([])
+  branches String[] @default([])
+
+  // Details
+  overview    String?
+  website     String?
+  established Int?
+
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+
+  // Status
+  isPublished Boolean @default(true)
+  isFeatured  Boolean @default(false)
+  isVerified  Boolean @default(false)
+
+  // Analytics
+  viewsCount   Int @default(0)
+  saveCount    Int @default(0)
+  compareCount Int @default(0)
+
+  // Ownership
+  createdById Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  createdBy User? @relation("CollegeCreatedBy", fields: [createdById], references: [id])
+
+  deadlines    AdmissionDeadline[]
+  scholarships CollegeScholarship[]
+  cutoffs      CutoffRecord[]
+  reviews      Review[]
+  savedBy      SavedCollege[]
+  views        CollegeView[]
+
+  @@index([city])
+  @@index([state])
+  @@index([rating])
+  @@index([fees])
+  @@index([nirfRank])
+  @@index([isPublished])
+  @@index([isFeatured])
+  @@index([isVerified])
+  @@index([viewsCount])
+  @@index([saveCount])
+  @@index([compareCount])
+  @@index([city, rating])
 }
 
 model RefreshToken {
@@ -48,49 +150,6 @@ model RefreshToken {
 
   @@index([userId])
   @@index([expiresAt])
-}
-
-model College {
-  id             Int                  @id @default(autoincrement())
-  name           String
-  slug           String               @unique
-  city           String
-  state          String?
-  type           String?
-  logoUrl        String?
-  bannerUrl      String?
-  gallery        String[]             @default([])
-  rating         Float                @default(0)
-  reviewCount    Int                  @default(0)
-  nirfRank       Int?
-  naacGrade      String?
-  fees           Int?
-  feesDisplay    String?
-  avgPackage     Int?
-  highestPackage Int?
-  placementRate  Float?
-  courses        String[]             @default([])
-  branches       String[]             @default([])
-  overview       String?
-  website        String?
-  established    Int?
-  isPublished    Boolean              @default(true)
-  createdById    Int?
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
-  deadlines      AdmissionDeadline[]
-  createdBy      User?                @relation("CollegeCreatedBy", fields: [createdById], references: [id])
-  scholarships   CollegeScholarship[]
-  cutoffs        CutoffRecord[]
-  reviews        Review[]
-  savedBy        SavedCollege[]
-
-  @@index([city])
-  @@index([rating])
-  @@index([fees])
-  @@index([nirfRank])
-  @@index([isPublished])
-  @@index([city, rating])
 }
 
 model SavedCollege {
@@ -142,8 +201,10 @@ model Review {
   rating     Float
   title      String?
   body       String
+  likesCount Int      @default(0)
   isApproved Boolean  @default(true)
   createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
   college    College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -187,15 +248,17 @@ model AdmissionDeadline {
 }
 
 model Discussion {
-  id        Int              @id @default(autoincrement())
-  title     String
-  body      String
-  status    DiscussionStatus @default(OPEN)
-  authorId  Int
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-  answers   Answer[]
-  author    User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  id         Int              @id @default(autoincrement())
+  title      String
+  body       String
+  status     DiscussionStatus @default(OPEN)
+  tags       String[]         @default([])
+  viewsCount Int              @default(0)
+  authorId   Int
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  answers    Answer[]
+  author     User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([status])
   @@index([createdAt])
@@ -225,6 +288,52 @@ model Notification {
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead])
+}
+
+// ---------------------------------------------
+// New models (Cloudinary uploads, analytics, contact)
+// ---------------------------------------------
+
+model Upload {
+  id         Int      @id @default(autoincrement())
+  publicId   String   @unique
+  url        String
+  folder     String
+  uploadedBy Int?
+  createdAt  DateTime @default(now())
+
+  uploader User? @relation(fields: [uploadedBy], references: [id], onDelete: SetNull)
+
+  @@index([folder])
+}
+
+model CollegeView {
+  id        Int      @id @default(autoincrement())
+  collegeId Int
+  userId    Int?
+  viewedAt  DateTime @default(now())
+
+  college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([collegeId])
+  @@index([viewedAt])
+}
+
+model ContactInquiry {
+  id         Int      @id @default(autoincrement())
+  name       String
+  email      String
+  subject    String
+  message    String
+  isResolved Boolean  @default(false)
+  userId     Int?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([isResolved])
+  @@index([createdAt])
 }
 
 enum Role {

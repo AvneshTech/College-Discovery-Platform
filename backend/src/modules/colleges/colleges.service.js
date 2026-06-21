@@ -15,7 +15,7 @@ function formatFeesDisplay(fees) {
 
 const collegesService = {
   async list(filters) {
-    const { page, limit, search, city, minRating, maxFees, branch, sortBy } = filters;
+    const { page, limit, search, city, state, minRating, maxFees, branch, course, featured, verified, sortBy } = filters;
 
     const where = { isPublished: true };
     const AND = [];
@@ -23,9 +23,13 @@ const collegesService = {
       AND.push({ OR: [{ name: { contains: search, mode: "insensitive" } }, { city: { contains: search, mode: "insensitive" } }] });
     }
     if (city) AND.push({ city: { equals: city, mode: "insensitive" } });
+    if (state) AND.push({ state: { equals: state, mode: "insensitive" } });
     if (minRating !== undefined) AND.push({ rating: { gte: minRating } });
     if (maxFees !== undefined) AND.push({ fees: { lte: maxFees } });
     if (branch) AND.push({ branches: { has: branch } });
+    if (course) AND.push({ courses: { has: course } });
+    if (featured !== undefined) AND.push({ isFeatured: featured });
+    if (verified !== undefined) AND.push({ isVerified: verified });
     if (AND.length) where.AND = AND;
 
     const { total, colleges } = await collegesRepository.findMany({
@@ -38,9 +42,16 @@ const collegesService = {
     return { colleges, total, page, totalPages: Math.max(1, Math.ceil(total / limit)) };
   },
 
-  async getById(id) {
+  async getById(id, viewerId) {
     const college = await collegesRepository.findById(id);
     if (!college) throw new ApiError(404, "College not found");
+
+    // Fire-and-forget-ish, but awaited so tests/serverless cold starts are
+    // deterministic. Doesn't block the response on anything but a single
+    // cheap transaction.
+    await collegesRepository.recordView(id, viewerId ?? null);
+    college.viewsCount += 1; // reflect the increment in this response without a second read
+
     return college;
   },
 
@@ -51,21 +62,25 @@ const collegesService = {
   },
 
   async update(id, data) {
-    await this.getById(id); // 404 if missing
+    await collegesRepository.findById(id).then((c) => {
+      if (!c) throw new ApiError(404, "College not found");
+    });
     const patch = { ...data };
     if (data.fees != null) patch.feesDisplay = formatFeesDisplay(data.fees);
     return collegesRepository.update(id, patch);
   },
 
   async remove(id) {
-    await this.getById(id);
+    const existing = await collegesRepository.findById(id);
+    if (!existing) throw new ApiError(404, "College not found");
     return collegesRepository.delete(id);
   },
 
   // Create (or update) the current user's review, then recompute the
   // college's aggregate rating + review count from the real Review rows.
   async addReview(collegeId, userId, data) {
-    await this.getById(collegeId); // 404 if the college doesn't exist
+    const existing = await collegesRepository.findById(collegeId);
+    if (!existing) throw new ApiError(404, "College not found");
     const review = await collegesRepository.upsertReview({ collegeId, userId, ...data });
 
     const agg = await collegesRepository.aggregateReviews(collegeId);
@@ -78,8 +93,15 @@ const collegesService = {
   async compare(ids) {
     const colleges = await collegesRepository.findByIds(ids);
     if (colleges.length !== ids.length) throw new ApiError(404, "One or more colleges not found");
+    // Track that these colleges were compared together — feeds the
+    // "Most Compared Colleges" analytics widget.
+    await collegesRepository.incrementCompareCount(ids);
     return colleges;
   },
+
+  featured: (limit) => collegesRepository.findFeatured(limit),
+  trending: (limit) => collegesRepository.findTrending(limit),
+  mostViewed: (limit) => collegesRepository.findMostViewed(limit),
 
   // The "AI-Powered Recommendation Engine" — see recommendation.engine.js
   async predict(input) {

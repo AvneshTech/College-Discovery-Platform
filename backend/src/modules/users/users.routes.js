@@ -25,11 +25,19 @@ router.post(
   authMiddleware,
   asyncHandler(async (req, res) => {
     const collegeId = Number(req.params.collegeId);
+    const existing = await prisma.savedCollege.findUnique({
+      where: { userId_collegeId: { userId: req.user.id, collegeId } },
+    });
     await prisma.savedCollege.upsert({
       where: { userId_collegeId: { userId: req.user.id, collegeId } },
       create: { userId: req.user.id, collegeId },
       update: {},
     });
+    // Only bump saveCount the first time — re-saving an already-saved
+    // college (idempotent client retry) shouldn't inflate the counter.
+    if (!existing) {
+      await prisma.college.update({ where: { id: collegeId }, data: { saveCount: { increment: 1 } } });
+    }
     res.status(201).json({ message: "Saved" });
   })
 );
@@ -38,26 +46,70 @@ router.delete(
   "/me/saved/:collegeId",
   authMiddleware,
   asyncHandler(async (req, res) => {
-    await prisma.savedCollege.deleteMany({
-      where: { userId: req.user.id, collegeId: Number(req.params.collegeId) },
+    const collegeId = Number(req.params.collegeId);
+    const { count } = await prisma.savedCollege.deleteMany({
+      where: { userId: req.user.id, collegeId },
     });
+    if (count > 0) {
+      await prisma.college.updateMany({
+        where: { id: collegeId, saveCount: { gt: 0 } },
+        data: { saveCount: { decrement: 1 } },
+      });
+    }
     res.json({ message: "Removed" });
   })
 );
 
-router.put(
-  "/me",
+async function updateProfileHandler(req, res) {
+  const user = await prisma.user.update({
+    where: { id: req.user.id },
+    data: req.body,
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      avatarUrl: true,
+      avatarPublicId: true,
+      bio: true,
+      preferredBranches: true,
+      preferredCities: true,
+      budgetMaxFees: true,
+    },
+  });
+  res.json(user);
+}
+
+router.put("/me", authMiddleware, validate(updateProfileSchema), asyncHandler(updateProfileHandler));
+
+// Aliases matching the documented REST contract (GET/PUT /api/users/profile),
+// kept alongside /me for backward compatibility with existing frontend calls.
+router.get(
+  "/profile",
   authMiddleware,
-  validate(updateProfileSchema),
   asyncHandler(async (req, res) => {
-    const user = await prisma.user.update({
+    const user = await prisma.user.findUnique({
       where: { id: req.user.id },
-      data: req.body,
-      select: { id: true, name: true, email: true, avatarUrl: true, preferredBranches: true, preferredCities: true, budgetMaxFees: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        avatarUrl: true,
+        avatarPublicId: true,
+        bio: true,
+        preferredBranches: true,
+        preferredCities: true,
+        budgetMaxFees: true,
+        emailVerified: true,
+        lastLoginAt: true,
+        createdAt: true,
+      },
     });
     res.json(user);
   })
 );
+
+router.put("/profile", authMiddleware, validate(updateProfileSchema), asyncHandler(updateProfileHandler));
 
 // "Predictor Usage" + "Discussion Activity" dashboard analytics
 router.get(

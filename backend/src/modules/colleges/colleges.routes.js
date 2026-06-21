@@ -8,15 +8,19 @@ const {
   compareSchema,
   predictorSchema,
   createReviewSchema,
+  topListQuerySchema,
 } = require("./colleges.schema");
 const validate = require("../../middleware/validate");
 const { authMiddleware, optionalAuth, requireRole } = require("../../middleware/auth");
 
 // Public
 router.get("/", validate(listQuerySchema), collegesController.list);
+router.get("/featured", validate(topListQuerySchema), collegesController.featured);
+router.get("/trending", validate(topListQuerySchema), collegesController.trending);
+router.get("/most-viewed", validate(topListQuerySchema), collegesController.mostViewed);
 router.post("/compare", validate(compareSchema), collegesController.compare);
 router.post("/predictor", optionalAuth, validate(predictorSchema), collegesController.predict);
-router.get("/:id", collegesController.getById);
+router.get("/:id", optionalAuth, collegesController.getById);
 
 // Authenticated: any logged-in user can post/update their review for a college.
 router.post("/:id/reviews", authMiddleware, validate(createReviewSchema), collegesController.createReview);

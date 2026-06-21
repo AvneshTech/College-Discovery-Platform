@@ -10,7 +10,21 @@ const authRepository = {
   findUserById: (id) =>
     prisma.user.findUnique({
       where: { id },
-      select: { id: true, name: true, email: true, role: true, avatarUrl: true, createdAt: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        avatarUrl: true,
+        avatarPublicId: true,
+        bio: true,
+        preferredBranches: true,
+        preferredCities: true,
+        budgetMaxFees: true,
+        emailVerified: true,
+        lastLoginAt: true,
+        createdAt: true,
+      },
     }),
 
   createUser: ({ name, email, password }) =>
@@ -29,6 +43,9 @@ const authRepository = {
 
   revokeAllUserTokens: (userId) =>
     prisma.refreshToken.updateMany({ where: { userId }, data: { revoked: true } }),
+
+  updateLastLogin: (userId) =>
+    prisma.user.update({ where: { id: userId }, data: { lastLoginAt: new Date() } }),
 };
 
 module.exports = authRepository;

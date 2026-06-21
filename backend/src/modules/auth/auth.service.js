@@ -44,6 +44,7 @@ const authService = {
     if (!user.isActive) throw new ApiError(403, "This account has been deactivated");
 
     const tokens = await issueTokenPair(user, meta);
+    await authRepository.updateLastLogin(user.id);
     return {
       tokens,
       user: { id: user.id, name: user.name, email: user.email, role: user.role },

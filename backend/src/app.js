@@ -6,6 +6,7 @@
 // the real, secure, modular contract the one that actually runs.
 const express = require("express");
 const cookieParser = require("cookie-parser");
+const uploadRoutes = require("./modules/uploads/uploads.routes");
 
 const {
   helmetMiddleware,
@@ -20,6 +21,9 @@ const authRoutes = require("./modules/auth/auth.routes");
 const collegesRoutes = require("./modules/colleges/colleges.routes");
 const discussionsRoutes = require("./modules/discussions/discussions.routes");
 const usersRoutes = require("./modules/users/users.routes");
+const notificationsRoutes = require("./modules/notifications/notifications.routes");
+const contactRoutes = require("./modules/contact/contact.routes");
+const analyticsRoutes = require("./modules/analytics/analytics.routes");
 
 function createApp() {
   const app = express();
@@ -47,6 +51,14 @@ function createApp() {
   app.use("/api/colleges", collegesRoutes);
   app.use("/api/discussions", discussionsRoutes);
   app.use("/api/users", usersRoutes);
+  app.use("/api/notifications", notificationsRoutes);
+  app.use("/api/contact", contactRoutes);
+  app.use("/api/analytics", analyticsRoutes);
+  // NOTE (bug fix): uploads was previously registered AFTER notFoundHandler,
+  // which meant every /api/uploads/* request was swallowed by the 404
+  // handler before multer/cloudinary ever ran. It must live with the other
+  // feature routers, above the 404/error handlers.
+  app.use("/api/uploads", uploadRoutes);
 
   // ── 404 + centralized error handler (must be registered last) ──────────
   app.use(notFoundHandler);
