@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "../lib/AuthProvider";
 import { useTheme } from "../lib/ThemeProvider";
+import NotificationBell from "./NotificationBell";
+import { disconnectSocket } from "../hooks/useSocket";
 
 function ThemeToggle({ className = "" }: { className?: string }) {
   const { theme, toggleTheme } = useTheme();
@@ -37,11 +39,16 @@ const NAV_LINKS = [
   { href: "/compare", label: "Compare" },
   { href: "/predictor", label: "Predictor" },
   { href: "/discussions", label: "Q&A" },
+  { href: "/contact", label: "Contact" },
 ];
 
 export default function Navbar() {
   const pathname = usePathname();
   const { user, logout } = useAuth(); // <-- replaces isLoggedIn()/getUser()/logout from utils/auth
+  const handleLogout = () => {
+    disconnectSocket(); // tear down the realtime connection on sign-out
+    logout();
+  };
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -100,6 +107,7 @@ export default function Navbar() {
 
           <div className="hidden md:flex items-center gap-2">
             <ThemeToggle />
+            {user && <NotificationBell />}
             {user ? (
               <>
                 <Link href="/saved" className="px-3 py-2 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/8 transition-all">
@@ -113,7 +121,7 @@ export default function Navbar() {
                     {user.name.split(" ")[0]}
                   </span>
                 </Link>
-                <button onClick={logout} className="btn btn-sm btn-outline !text-white/60 !border-white/15 hover:!bg-white/10 hover:!text-white">
+                <button onClick={handleLogout} className="btn btn-sm btn-outline !text-white/60 !border-white/15 hover:!bg-white/10 hover:!text-white">
                   Sign out
                 </button>
               </>
@@ -131,10 +139,13 @@ export default function Navbar() {
 
           <div className="md:hidden flex items-center gap-1">
           <ThemeToggle />
+          {user && <NotificationBell />}
           <button
             onClick={() => setMobileOpen((v) => !v)}
             className="w-9 h-9 flex flex-col items-center justify-center gap-1.5 rounded-lg hover:bg-white/10 transition"
             aria-label="Toggle menu"
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-menu"
           >
             <span className={`block w-5 h-0.5 bg-white transition-all ${mobileOpen ? "rotate-45 translate-y-2" : ""}`} />
             <span className={`block w-5 h-0.5 bg-white transition-all ${mobileOpen ? "opacity-0" : ""}`} />
@@ -145,7 +156,7 @@ export default function Navbar() {
       </div>
 
       {mobileOpen && (
-        <div className="md:hidden border-t border-white/10 bg-[#0d1529] animate-fade-in">
+        <div id="mobile-menu" className="md:hidden border-t border-white/10 bg-[#0d1529] animate-fade-in">
           <nav className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-1">
             {NAV_LINKS.map(({ href, label }) => (
               <Link
@@ -167,7 +178,7 @@ export default function Navbar() {
                   <Link href="/profile" className="block px-4 py-3 rounded-xl text-sm font-medium text-white/70 hover:text-white hover:bg-white/8 transition-all">
                     My Profile ({user.name.split(" ")[0]})
                   </Link>
-                  <button onClick={logout} className="w-full text-left px-4 py-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-500/10 transition-all">
+                  <button onClick={handleLogout} className="w-full text-left px-4 py-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-500/10 transition-all">
                     Sign Out
                   </button>
                 </>

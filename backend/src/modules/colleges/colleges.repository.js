@@ -39,6 +39,27 @@ const collegesRepository = {
   setRatingAggregate: (collegeId, rating, reviewCount) =>
     prisma.college.update({ where: { id: collegeId }, data: { rating, reviewCount } }),
 
+  // ── Review edit / delete / like (Phase 10) ───────────────────────────────
+  findReviewById: (id) =>
+    prisma.review.findUnique({ where: { id }, include: { user: { select: { name: true } } } }),
+
+  updateReview: ({ id, rating, title, body }) =>
+    prisma.review.update({
+      where: { id },
+      data: { rating, title, body },
+      include: { user: { select: { name: true } } },
+    }),
+
+  deleteReview: (id) => prisma.review.delete({ where: { id } }),
+
+  // Atomic increment so concurrent likes never clobber each other.
+  likeReview: (id) =>
+    prisma.review.update({
+      where: { id },
+      data: { likesCount: { increment: 1 } },
+      include: { user: { select: { name: true } } },
+    }),
+
   create: (data) => prisma.college.create({ data }),
 
   update: (id, data) => prisma.college.update({ where: { id }, data }),

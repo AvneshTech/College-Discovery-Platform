@@ -53,6 +53,33 @@ const collegesController = {
     res.status(201).json(review);
   }),
 
+  updateReview: asyncHandler(async (req, res) => {
+    const review = await collegesService.updateReview(
+      Number(req.params.id),
+      Number(req.params.reviewId),
+      req.user.id,
+      req.body
+    );
+    res.json(review);
+  }),
+
+  deleteReview: asyncHandler(async (req, res) => {
+    const result = await collegesService.deleteReview(
+      Number(req.params.id),
+      Number(req.params.reviewId),
+      req.user
+    );
+    res.json(result);
+  }),
+
+  likeReview: asyncHandler(async (req, res) => {
+    const review = await collegesService.likeReview(
+      Number(req.params.id),
+      Number(req.params.reviewId)
+    );
+    res.json(review);
+  }),
+
   compare: asyncHandler(async (req, res) => {
     const colleges = await collegesService.compare(req.body.ids);
     res.json(colleges);

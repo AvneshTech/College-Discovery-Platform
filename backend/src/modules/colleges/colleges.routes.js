@@ -8,6 +8,8 @@ const {
   compareSchema,
   predictorSchema,
   createReviewSchema,
+  updateReviewSchema,
+  reviewParamsSchema,
   topListQuerySchema,
 } = require("./colleges.schema");
 const validate = require("../../middleware/validate");
@@ -24,6 +26,28 @@ router.get("/:id", optionalAuth, collegesController.getById);
 
 // Authenticated: any logged-in user can post/update their review for a college.
 router.post("/:id/reviews", authMiddleware, validate(createReviewSchema), collegesController.createReview);
+
+// Review edit / delete / like (Phase 10).
+// Edit/delete are ownership-checked in the service (author only; ADMIN may also
+// delete for moderation). Like is open to any authenticated user.
+router.put(
+  "/:id/reviews/:reviewId",
+  authMiddleware,
+  validate(updateReviewSchema),
+  collegesController.updateReview
+);
+router.delete(
+  "/:id/reviews/:reviewId",
+  authMiddleware,
+  validate(reviewParamsSchema),
+  collegesController.deleteReview
+);
+router.post(
+  "/:id/reviews/:reviewId/like",
+  authMiddleware,
+  validate(reviewParamsSchema),
+  collegesController.likeReview
+);
 
 // Admin-only — RBAC enforced here, not just hidden in the UI
 router.post("/", authMiddleware, requireRole("ADMIN"), validate(createCollegeSchema), collegesController.create);

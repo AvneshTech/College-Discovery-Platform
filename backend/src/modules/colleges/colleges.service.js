@@ -13,6 +13,14 @@ function formatFeesDisplay(fees) {
   return `₹${Number(fees).toLocaleString("en-IN")} / yr`;
 }
 
+// Recompute and persist the denormalized College.rating / reviewCount from the
+// real Review rows. Shared by create/edit/delete so they never drift.
+async function recomputeRating(collegeId) {
+  const agg = await collegesRepository.aggregateReviews(collegeId);
+  const avg = agg._avg.rating ? Math.round(agg._avg.rating * 10) / 10 : 0;
+  await collegesRepository.setRatingAggregate(collegeId, avg, agg._count._all);
+}
+
 const collegesService = {
   async list(filters) {
     const { page, limit, search, city, state, minRating, maxFees, branch, course, featured, verified, sortBy } = filters;
@@ -83,11 +91,38 @@ const collegesService = {
     if (!existing) throw new ApiError(404, "College not found");
     const review = await collegesRepository.upsertReview({ collegeId, userId, ...data });
 
-    const agg = await collegesRepository.aggregateReviews(collegeId);
-    const avg = agg._avg.rating ? Math.round(agg._avg.rating * 10) / 10 : 0;
-    await collegesRepository.setRatingAggregate(collegeId, avg, agg._count._all);
-
+    await recomputeRating(collegeId);
     return review;
+  },
+
+  // ── Review edit / delete / like (Phase 10) ───────────────────────────────
+  // Ownership: only the review's author may edit/delete it; an ADMIN may also
+  // delete (moderation). Likes are open to any authenticated user.
+  async updateReview(collegeId, reviewId, userId, data) {
+    const review = await collegesRepository.findReviewById(reviewId);
+    if (!review || review.collegeId !== collegeId) throw new ApiError(404, "Review not found");
+    if (review.userId !== userId) throw new ApiError(403, "You can only edit your own review");
+
+    const updated = await collegesRepository.updateReview({ id: reviewId, ...data });
+    await recomputeRating(collegeId);
+    return updated;
+  },
+
+  async deleteReview(collegeId, reviewId, user) {
+    const review = await collegesRepository.findReviewById(reviewId);
+    if (!review || review.collegeId !== collegeId) throw new ApiError(404, "Review not found");
+    if (review.userId !== user.id && user.role !== "ADMIN") {
+      throw new ApiError(403, "You can only delete your own review");
+    }
+    await collegesRepository.deleteReview(reviewId);
+    await recomputeRating(collegeId);
+    return { message: "Review deleted" };
+  },
+
+  async likeReview(collegeId, reviewId) {
+    const review = await collegesRepository.findReviewById(reviewId);
+    if (!review || review.collegeId !== collegeId) throw new ApiError(404, "Review not found");
+    return collegesRepository.likeReview(reviewId);
   },
 
   async compare(ids) {

@@ -2,8 +2,22 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import Navbar from "../components/Navbar";
 import { API_BASE } from "../utils/api";
+
+// Phase 12 — lazy-load the Recharts-powered charts so their bundle is only
+// shipped to /compare (and the predictor), not every page.
+const CompareCharts = dynamic(() => import("../components/CompareCharts"), {
+  ssr: false,
+  loading: () => (
+    <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+      {[1, 2].map((i) => (
+        <div key={i} className="skeleton h-72 rounded-2xl" />
+      ))}
+    </div>
+  ),
+});
 
 // Matches the Prisma College model returned by POST /api/colleges/compare.
 type College = {
@@ -16,6 +30,8 @@ type College = {
   courses?: string[];
   avgPackage?: number | null;
   highestPackage?: number | null;
+  placementRate?: number | null;
+  nirfRank?: number | null;
 };
 
 const COMPARE_FIELDS = [
@@ -161,6 +177,20 @@ function CompareContent() {
                 </div>
               ))}
             </div>
+
+            {/* Visual charts — radar (overall), packages, fees (Phase 6) */}
+            <CompareCharts
+              colleges={colleges.map((c) => ({
+                id: c.id,
+                name: c.name,
+                rating: c.rating,
+                fees: c.fees ?? null,
+                avgPackage: c.avgPackage ?? null,
+                highestPackage: c.highestPackage ?? null,
+                placementRate: c.placementRate ?? null,
+                nirfRank: c.nirfRank ?? null,
+              }))}
+            />
 
             {/* Rating visual comparison */}
             <div className="card p-6">

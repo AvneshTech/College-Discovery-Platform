@@ -3,95 +3,122 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "../components/Navbar";
+import CollegeCard from "../components/CollegeCard";
+import { SavedGridSkeleton } from "../components/Skeleton";
+import ErrorState from "../components/ErrorState";
 import { apiFetch } from "../lib/apiClient";
+import { collegeLogo, collegeBanner } from "../utils/collegeImages";
 import { useAuth } from "../lib/AuthProvider";
+import { useToast } from "../components/Toast";
 
 type College = {
   id: number;
   name: string;
   city: string;
+  state?: string | null;
   rating: number;
+  reviewCount?: number;
+  logoUrl?: string | null;
+  bannerUrl?: string | null;
+  nirfRank?: number | null;
+  naacGrade?: string | null;
   feesDisplay?: string | null;
   fees?: number | null;
+  avgPackage?: number | null;
+  highestPackage?: number | null;
+  placementRate?: number | null;
 };
 
 export default function SavedPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const toast = useToast();
   const [savedColleges, setSavedColleges] = useState<College[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
-  // Wait for the session bootstrap (refresh cookie) before redirecting.
+  const load = async () => {
+    setLoadError(false);
+    try {
+      const res = await apiFetch("/api/users/me/saved");
+      if (!res.ok) throw new Error("fetch failed");
+      setSavedColleges(await res.json());
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
       router.replace("/login");
       return;
     }
-    (async () => {
-      try {
-        const res = await apiFetch("/api/users/me/saved");
-        if (res.ok) setSavedColleges(await res.json());
-      } finally {
-        setLoading(false);
-      }
-    })();
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, authLoading, router]);
 
   const handleRemove = async (id: number) => {
-    // optimistic
     const prev = savedColleges;
     setSavedColleges((list) => list.filter((c) => c.id !== id));
     try {
       const res = await apiFetch(`/api/users/me/saved/${id}`, { method: "DELETE" });
-      if (!res.ok) setSavedColleges(prev); // revert on failure
+      if (!res.ok) {
+        setSavedColleges(prev);
+        toast.error("Couldn't remove college");
+      } else {
+        toast.success("Removed from saved");
+      }
     } catch {
       setSavedColleges(prev);
+      toast.error("Network error");
     }
   };
 
   return (
-    <main className="min-h-screen bg-gray-100">
+    <main className="min-h-screen" style={{ background: "var(--surface-1)" }}>
       <Navbar />
 
-      <section className="max-w-5xl mx-auto p-6 sm:p-10">
-        <h1 className="text-3xl font-bold mb-2 text-slate-900">🔖 Saved Colleges</h1>
-        <p className="text-slate-500 mb-8">Your personal college shortlist</p>
+      <section className="mx-auto max-w-7xl p-6 sm:p-10">
+        <h1 className="mb-2 text-3xl font-bold text-slate-900 dark:text-white">🔖 Saved Colleges</h1>
+        <p className="mb-8 text-slate-500">Your personal college shortlist</p>
 
         {authLoading || loading ? (
-          <div className="text-center py-20 text-slate-600 animate-pulse">Loading...</div>
+          <SavedGridSkeleton />
+        ) : loadError ? (
+          <ErrorState title="Couldn't load saved colleges" onRetry={load} />
         ) : savedColleges.length === 0 ? (
-          <div className="text-center py-20">
-            <p className="text-slate-500 text-lg mb-4">No saved colleges yet.</p>
-            <button
-              onClick={() => router.push("/")}
-              className="bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700"
-            >
+          <div className="py-20 text-center">
+            <p className="mb-4 text-lg text-slate-500">No saved colleges yet.</p>
+            <button onClick={() => router.push("/")} className="btn btn-primary">
               Browse Colleges
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {savedColleges.map((college) => (
-              <div key={college.id} className="bg-white p-6 rounded-2xl shadow hover:shadow-md transition">
-                <h3
-                  className="text-xl font-bold text-slate-900 hover:text-blue-600 cursor-pointer"
-                  onClick={() => router.push(`/college/${college.id}`)}
-                >
-                  {college.name}
-                </h3>
-                <p className="text-slate-600 text-sm mt-1">📍 {college.city}</p>
-                <p className="mt-2 text-slate-700">⭐ {college.rating}</p>
-                {(college.feesDisplay || college.fees) && (
-                  <p className="text-slate-500 text-sm">💰 {college.feesDisplay || college.fees}</p>
-                )}
-                <button
-                  onClick={() => handleRemove(college.id)}
-                  className="mt-4 w-full bg-red-50 text-red-500 border border-red-200 px-4 py-2 rounded-lg hover:bg-red-100 text-sm font-semibold transition"
-                >
-                  Remove
-                </button>
-              </div>
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {savedColleges.map((college, i) => (
+              <CollegeCard
+                key={college.id}
+                id={college.id}
+                name={college.name}
+                city={college.city}
+                state={college.state}
+                rating={college.rating}
+                reviewCount={college.reviewCount}
+                nirfRank={college.nirfRank}
+                naacGrade={college.naacGrade}
+                logoUrl={collegeLogo(college)}
+                bannerUrl={collegeBanner(college)}
+                feesDisplay={college.feesDisplay}
+                avgPackage={college.avgPackage}
+                highestPackage={college.highestPackage}
+                placementRate={college.placementRate}
+                isSaved
+                onToggleSave={handleRemove}
+                animationDelay={i * 40}
+              />
             ))}
           </div>
         )}

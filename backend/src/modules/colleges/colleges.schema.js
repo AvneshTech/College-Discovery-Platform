@@ -26,6 +26,8 @@ const createCollegeSchema = z.object({
     city: z.string().trim().min(2).max(80),
     state: z.string().trim().max(80).optional(),
     type: z.string().trim().max(40).optional(),
+    email: z.string().trim().toLowerCase().email().optional(),
+    phone: z.string().trim().max(20).optional(),
     logoUrl: z.string().url().optional(),
     bannerUrl: z.string().url().optional(),
     nirfRank: z.coerce.number().int().positive().optional(),
@@ -39,6 +41,11 @@ const createCollegeSchema = z.object({
     overview: z.string().max(5000).optional(),
     website: z.string().url().optional(),
     established: z.coerce.number().int().min(1700).max(2100).optional(),
+    // SEO + status — settable by admins (Phase 11/15). Additive, optional.
+    metaTitle: z.string().trim().max(70).optional(),
+    metaDescription: z.string().trim().max(200).optional(),
+    isFeatured: z.coerce.boolean().optional(),
+    isVerified: z.coerce.boolean().optional(),
   }),
 });
 
@@ -54,6 +61,25 @@ const createReviewSchema = z.object({
     body: z.string().trim().min(5, "Review must be at least 5 characters").max(3000),
   }),
   params: z.object({ id: z.coerce.number().int().positive() }),
+});
+
+const updateReviewSchema = z.object({
+  body: z.object({
+    rating: z.coerce.number().min(1).max(5),
+    title: z.string().trim().max(120).optional(),
+    body: z.string().trim().min(5, "Review must be at least 5 characters").max(3000),
+  }),
+  params: z.object({
+    id: z.coerce.number().int().positive(),
+    reviewId: z.coerce.number().int().positive(),
+  }),
+});
+
+const reviewParamsSchema = z.object({
+  params: z.object({
+    id: z.coerce.number().int().positive(),
+    reviewId: z.coerce.number().int().positive(),
+  }),
 });
 
 const compareSchema = z.object({
@@ -86,5 +112,7 @@ module.exports = {
   compareSchema,
   predictorSchema,
   createReviewSchema,
+  updateReviewSchema,
+  reviewParamsSchema,
   topListQuerySchema,
 };

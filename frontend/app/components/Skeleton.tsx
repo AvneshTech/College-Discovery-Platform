@@ -41,3 +41,63 @@ export function PageSkeleton() {
     </div>
   );
 }
+
+// ── Additional skeleton variants (Phase 14) ────────────────────────────────
+
+/** Profile page skeleton — avatar + fields, mirrors the rebuilt profile. */
+export function ProfileSkeleton() {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-8 dark:border-slate-800 dark:bg-slate-900/80">
+      <div className="mb-8 flex flex-col items-center gap-3">
+        <div className="skeleton h-24 w-24 rounded-full" />
+        <div className="skeleton h-5 w-40 rounded-lg" />
+        <div className="skeleton h-3 w-52 rounded-lg" />
+      </div>
+      <div className="space-y-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="skeleton h-16 w-full rounded-xl" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Admin table skeleton — header bar + N rows. */
+export function AdminTableSkeleton({ rows = 6 }: { rows?: number }) {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800">
+      <div className="skeleton h-11 w-full" />
+      <div className="divide-y divide-slate-100 dark:divide-slate-800">
+        {Array.from({ length: rows }).map((_, i) => (
+          <div key={i} className="flex items-center gap-4 p-4">
+            <div className="skeleton h-4 w-1/3 rounded-lg" />
+            <div className="skeleton h-4 w-1/4 rounded-lg" />
+            <div className="skeleton ml-auto h-8 w-24 rounded-lg" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Gallery skeleton — responsive grid of image placeholders. */
+export function GallerySkeleton({ count = 6 }: { count?: number }) {
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="skeleton aspect-video w-full rounded-xl" />
+      ))}
+    </div>
+  );
+}
+
+/** Saved-colleges grid skeleton — reuses the card skeleton. */
+export function SavedGridSkeleton() {
+  return (
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <CollegeCardSkeleton key={i} />
+      ))}
+    </div>
+  );
+}
