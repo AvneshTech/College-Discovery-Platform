@@ -32,10 +32,10 @@ function hashToken(token) {
 
 const REFRESH_COOKIE_NAME = "ce_refresh";
 
-const refreshCookieOptions = (isProd) => ({
+const refreshCookieOptions = () => ({
   httpOnly: true,
-  secure: isProd,
-  sameSite: "lax",
+  secure: true,
+  sameSite: "none",
   path: "/api/auth",
   maxAge: REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000,
 });
