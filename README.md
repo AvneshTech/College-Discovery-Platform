@@ -67,27 +67,27 @@ https://github.com/AvneshTech/College-Discovery-Platform
 
 ## Home Page
 
-(Add Screenshot Here)
+(<screenshots/Home page.png>)
 
 ## College Search & Filtering
 
-(Add Screenshot Here)
+(<screenshots/College Search & Filtering.png>)
 
 ## College Comparison
 
-(Add Screenshot Here)
+(<screenshots/College Comparison.png>)
 
 ## Admission Predictor
 
-(Add Screenshot Here)
+(<screenshots/Admission Predictor.png>)
 
 ## College Details Page
 
-(Add Screenshot Here)
+(<screenshots/College Details Page.png>)
 
 ## Discussion Forum
 
-(Add Screenshot Here)
+(<screenshots/Discussion Forum.png>)
 
 ## User Dashboard
 
