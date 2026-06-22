@@ -40,25 +40,25 @@ The platform combines modern web technologies with a scalable architecture to de
 ## Frontend
 
 ```txt
-YOUR_VERCEL_URL
+https://college-discovery-platform-bay.vercel.app/
 ```
 
 ## Backend
 
 ```txt
-YOUR_RENDER_URL
+https://college-discovery-platform-b7gc.onrender.com/
 ```
 
 ## Database
 
 ```txt
-Neon PostgreSQL
+postgresql://neondb_owner:**Password**@ep-sparkling-sun-aia9596g-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
 ```
 
 ## Repository
 
 ```txt
-YOUR_GITHUB_REPOSITORY
+https://github.com/AvneshTech/College-Discovery-Platform
 ```
 
 ---
