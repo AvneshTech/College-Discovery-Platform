@@ -28,7 +28,7 @@ const authController = {
     res.cookie(
       REFRESH_COOKIE_NAME,
       tokens.refreshToken,
-      refreshCookieOptions()
+      refreshCookieOptions(),
     );
 
     res.json({
@@ -41,15 +41,12 @@ const authController = {
   refresh: asyncHandler(async (req, res) => {
     const rawToken = req.cookies?.[REFRESH_COOKIE_NAME];
 
-    const { tokens, user } = await authService.refresh(
-      rawToken,
-      meta(req)
-    );
+    const { tokens, user } = await authService.refresh(rawToken, meta(req));
 
     res.cookie(
       REFRESH_COOKIE_NAME,
       tokens.refreshToken,
-      refreshCookieOptions()
+      refreshCookieOptions(),
     );
 
     res.json({
@@ -68,10 +65,7 @@ const authController = {
 
     await authService.logout(rawToken);
 
-    res.clearCookie(
-      REFRESH_COOKIE_NAME,
-      refreshCookieOptions()
-    );
+    res.clearCookie(REFRESH_COOKIE_NAME, refreshCookieOptions());
 
     res.json({
       message: "Logged out",
